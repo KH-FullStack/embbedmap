@@ -22,7 +22,7 @@
       }
       iframe {
         width: 100%;
-        height: 71%;
+        height: 68%;
       }
       button {
         margin-left: 10px;
@@ -35,6 +35,11 @@
       a {
         text-decoration: none;
         color: black;
+        font-size: 30px;
+      }
+      span,
+      strong {
+        font-size: 30px;
       }
     </style>
     <script>
@@ -98,8 +103,8 @@
         sessionStorage.removeItem(value);
         // setTimeout(() => {
         // }, 500);
-          update_trip_status();
-          location.reload();
+        update_trip_status();
+        location.reload();
       }
       function update_trip_status() {
         const storageData = get_storage();
