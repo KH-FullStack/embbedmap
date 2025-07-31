@@ -12,19 +12,145 @@
       #trip_info {
         margin: 20px;
         padding: 5px;
-        width: 1000px;
+        width: 950px;
         box-sizing: border-box;
         font-family: Arial, sans-serif;
         border: 1px solid #ccc;
         border-radius: 8px;
-        background-color: #f9f9f9;
+        background-color: rgb(242, 132, 42);
       }
       iframe {
         width: 100%;
         height: 390px;
       }
+      button {
+        margin-left: 10px;
+        margin-right: 10px;
+        padding: 5px 10px;
+      }
+      a {
+        /* remove decoration  */
+        text-decoration: none;
+        color: #007bff;
+      }
     </style>
     <script>
+      const document_events = ["DOMContentLoaded", "load", "beforeunload", "visibilitychange", "resize", "scroll", "focus", "blur", "change", "touchstart", "touchmove", "touchend", "touchcancel", "wheel"];
+      const window_events = ["load", "beforeunload", "unload", "resize", "scroll", "focus", "blur"];
+      document_events.forEach((event) => {
+        document.addEventListener(event, () => {
+          update_trip_status();
+        });
+      });
+      window_events.forEach((event) => {
+        window.addEventListener(event, () => {
+          update_trip_status();
+        });
+      });
+
+      function set_storage(value) {
+        if (!value) {
+          console.error("Value must be defined!");
+          return;
+        }
+        const expiryDate = new Date();
+        expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+        document.cookie = `${value}=${value}; expires=${expiryDate.toUTCString()};path=/; Secure;alert('Cookie set!')`;
+        localStorage.setItem(value, value);
+        sessionStorage.setItem(value, value);
+        update_trip_status();
+      }
+
+      function get_storage() {
+        function getAllCookies() {
+          return document.cookie.split(";").reduce((cookies, cookie) => {
+            const [name, value] = cookie.trim().split("=");
+            cookies[name] = decodeURIComponent(value);
+            return cookies;
+          }, {});
+        }
+        function getAllLocalStorage() {
+          return { ...localStorage };
+        }
+        function getAllSessionStorage() {
+          return { ...sessionStorage };
+        }
+        const allCookies = getAllCookies();
+        const allLocalStorage = getAllLocalStorage();
+        const allSessionStorage = getAllSessionStorage();
+        return {
+          cookies: allCookies,
+          localStorage: allLocalStorage,
+          sessionStorage: allSessionStorage,
+        };
+      }
+
+      function delete_storage_item(value) {
+        if (!value) {
+          console.error("Value must be defined!");
+          return;
+        }
+        document.cookie = `${value}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure`;
+        localStorage.removeItem(value);
+        sessionStorage.removeItem(value);
+        // setTimeout(() => {
+        // }, 500);
+          update_trip_status();
+          location.reload();
+      }
+      function update_trip_status() {
+        const storageData = get_storage();
+        if (!storageData || !storageData.cookies) {
+          console.error("No storage data found.");
+          return;
+        }
+        const cookies = storageData.cookies;
+        const localStorage = storageData.localStorage;
+        const sessionStorage = storageData.sessionStorage;
+        for (const tripNumber of Object.keys(cookies)) {
+          if (!tripNumber.startsWith("trip_number_")) {
+            continue; // Skip if not a trip number
+          }
+          const tripElement = document.querySelector(`.${tripNumber}`);
+          if (tripElement) {
+            if (cookies[tripNumber]) {
+              tripElement.style.backgroundColor = "rgb(47, 245, 8)"; // Green for completed
+            } else {
+              tripElement.style.backgroundColor = "orange"; // Red for not completed
+            }
+          }
+        }
+
+        for (const tripNumber of Object.keys(localStorage)) {
+          if (!tripNumber.startsWith("trip_number_")) {
+            continue; // Skip if not a trip number
+          }
+          const tripElement = document.querySelector(`.${tripNumber}`);
+          if (tripElement) {
+            if (localStorage[tripNumber]) {
+              tripElement.style.backgroundColor = "rgb(47, 245, 8)"; // Green for completed
+            } else {
+              tripElement.style.backgroundColor = "orange"; // Red for not completed
+            }
+          }
+        }
+
+        for (const tripNumber of Object.keys(sessionStorage)) {
+          if (!tripNumber.startsWith("trip_number_")) {
+            continue; // Skip if not a trip number
+          }
+          const tripElement = document.querySelector(`.${tripNumber}`);
+          if (tripElement) {
+            if (sessionStorage[tripNumber]) {
+              tripElement.style.backgroundColor = "rgb(47, 245, 8)"; // Green for completed
+            } else {
+              tripElement.style.backgroundColor = "orange"; // Red for not completed
+            }
+          }
+        }
+      }
+      function delete_storage() {}
+
       function copyToClipboard(text) {
         const element = document.getElementsByClassName(text)[0];
         const elementText = element.textContent || element.innerText;
@@ -37,216 +163,333 @@
             console.error("Failed to copy text: ", err);
           });
       }
+
+      function completeMark(value) {
+        set_storage(value);
+      }
+      function uncompleteMark(value) {
+        delete_storage_item(value);
+      }
+
+      function viewCookies() {
+        const storageData = get_storage();
+        console.log("Cookies:", storageData);
+      }
     </script>
   </head>
 
   <body>
-    <div id="trip_info">
+    <!---------------------------- 01 --------------------------------->
+    <div id="trip_info" class="trip_number_01">
       <div>
         <strong>Trip 01</strong>
       </div>
       <br />
       <div>
-        <strong>FROM:</strong><span class="fromtrip01">Home (1850 Victoria Park Ave)</span><span><button onclick="copyToClipboard('fromtrip01')">COPY</button></span>
+        <strong>FROM: </strong><span class="fromtrip01">Home (1850 Victoria Park Ave)</span><span><button onclick="copyToClipboard('fromtrip01')">COPY</button><span>Toronto, ON</span></span>
       </div>
       <br />
       <div>
-        <strong>TO:</strong><span class="totrip01">Esso, 1 ON-529, Britt, ON P0G 1A0 </span><span><button onclick="copyToClipboard('totrip01')">COPY</button></span>
+        <strong>TO: </strong><span class="totrip01">Esso, 1 ON-529, Britt, ON P0G 1A0</span><span><button onclick="copyToClipboard('totrip01')">COPY</button><span>Britt, ON</span></span>
       </div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1218311.3204555756!2d-79.92281908909847!3d44.82695627308488!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e6!4m5!1s0x89d4cdf36b32b305%3A0xf2b7762dab4651f5!2s1850%20Victoria%20Park%20Ave%2C%20North%20York%2C%20ON%20M1R%201T1%2C%20Canada!3m2!1d43.740977199999996!2d-79.3112136!4m5!1s0x4d2c03c71fcf04f5%3A0x9a2c187572cfefd9!2sEsso!3m2!1d45.7704515!2d-80.4971735!5e0!3m2!1sen!2sca!4v1753940189774!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <div>
+        <button onclick="completeMark('trip_number_01')">Mark Complete</button>
+        <button onclick="uncompleteMark('trip_number_01')">UnMark Complete</button>
+      </div>
+      <br />
+      <div><a href="https://maps.app.goo.gl/LKJMwDmg54MDKtpb8" target="_blank">Open Route: Avoid Toll, Ferries</a></div>
+      <br />
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1451043.1448941382!2d-81.11973416857428!3d44.73861636507041!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x89d4cdf3718fc307%3A0x46da18100292aa95!2sGreenbriar%20North%2C%201850%20Victoria%20Park%20Ave%2C%20North%20York%2C%20ON%20M1R%201T1!3m2!1d43.741113999999996!2d-79.3106294!4m5!1s0x4d2c03c71fcf04f5%3A0x9a2c187572cfefd9!2sEsso%2C%201%20ON-529%2C%20Britt%2C%20ON%20P0G%201A0!3m2!1d45.7704515!2d-80.4971735!5e0!3m2!1sen!2sca!4v1753985272644!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
-
-    <div id="trip_info">
+    <br />
+    <!---------------------------- 02 --------------------------------->
+    <div id="trip_info" class="trip_number_02">
       <div>
         <strong>Trip 02</strong>
       </div>
       <br />
       <div>
-        <strong>FROM:</strong><span class="fromtrip02"> Esso, 1 ON-529, Britt, ON P0G 1A0 </span><span><button onclick="copyToClipboard('fromtrip02')">COPY</button></span>
+        <strong>FROM: </strong><span class="fromtrip02">Esso, 1 ON-529, Britt, ON P0G 1A0</span><span><button onclick="copyToClipboard('fromtrip02')">COPY</button><span>Britt, ON</span></span>
       </div>
       <br />
       <div>
-        <strong>TO:</strong><span class="totrip02"> 442 Bruce St, Sault Ste. Marie, ON P6B 1R4 </span><span><button onclick="copyToClipboard('totrip02')">COPY</button></span>
+        <strong>TO: </strong><span class="totrip02">442 Bruce St, Sault Ste. Marie, ON P6B 1R4</span><span><button onclick="copyToClipboard('totrip02')">COPY</button><span>Sault Ste. Marie, ON</span></span>
       </div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1414949.6252273363!2d-83.72798426297223!3d46.15923864142869!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e6!4m5!1s0x4d2c03c71fcf04f5%3A0x9a2c187572cfefd9!2sEsso%2C%201%20ON-529%2C%20Britt%2C%20ON%20P0G%201A0!3m2!1d45.7704515!2d-80.4971735!4m5!1s0x4d3638301d7c2561%3A0x29641ad838e01b6c!2s442%20Bruce%20Street%2C%20Sault%20Ste.%20Marie%2C%20ON!3m2!1d46.520116699999996!2d-84.3200974!5e0!3m2!1sen!2sca!4v1753941581930!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <div>
+        <button onclick="completeMark('trip_number_02')">Mark Complete</button>
+        <button onclick="uncompleteMark('trip_number_02')">UnMark Complete</button>
+      </div>
+      <br />
+      <div><a href="https://maps.app.goo.gl/avi5THPwribSxPjHA" target="_blank">Open Route: Avoid Toll, Ferries</a></div>
+      <br />
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1414949.4143642795!2d-83.72733391283012!3d46.15924684123458!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x4d2c03c71fcf04f5%3A0x9a2c187572cfefd9!2sEsso%2C%201%20ON-529%2C%20Britt%2C%20ON%20P0G%201A0!3m2!1d45.7704515!2d-80.4971735!4m5!1s0x4d3638301d7c2561%3A0x29641ad838e01b6c!2s442%20Bruce%20St%2C%20Sault%20Ste.%20Marie%2C%20ON%20P6B%201R4!3m2!1d46.520116699999996!2d-84.3200974!5e0!3m2!1sen!2sca!4v1753986405856!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
-
-    <div id="trip_info">
+    <br />
+    <!---------------------------- 03 --------------------------------->
+    <div id="trip_info" class="trip_number_03">
       <div>
         <strong>Trip 03</strong>
       </div>
       <br />
       <div>
-        <strong>FROM:</strong><span class="fromtrip03"> 442 Bruce St, Sault Ste. Marie, ON P6B 1R4 </span><span><button onclick="copyToClipboard('fromtrip03')">COPY</button></span>
+        <strong>FROM: </strong><span class="fromtrip03">442 Bruce St, Sault Ste. Marie, ON P6B 1R4</span><span><button onclick="copyToClipboard('fromtrip03')">COPY</button><span>Sault Ste. Marie, ON</span></span>
       </div>
       <br />
       <div>
-        <strong>TO:</strong><span class="totrip03"> 95 Mission Rd, Wawa, ON P0S 1K0 </span><span><button onclick="copyToClipboard('totrip03')">COPY</button></span>
+        <strong>TO: </strong><span class="totrip03">95 Mission Rd, Wawa, ON P0S 1K0</span><span><button onclick="copyToClipboard('totrip03')">COPY</button><span>Wawa, ON</span></span>
       </div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d693310.7723554475!2d-85.25719416786508!3d47.25090829443167!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e6!4m5!1s0x4d3638301d7c2561%3A0x29641ad838e01b6c!2s442%20Bruce%20St%2C%20Sault%20Ste.%20Marie%2C%20ON%20P6B%201R4!3m2!1d46.520116699999996!2d-84.3200974!4m5!1s0x4d470a5f8bfa7cc5%3A0x1aa015f981d9ae89!2s95%20Mission%20Road%2C%20Wawa%2C%20ON!3m2!1d47.9833164!2d-84.7797621!5e0!3m2!1sen!2sca!4v1753941793264!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <div>
+        <button onclick="completeMark('trip_number_03')">Mark Complete</button>
+        <button onclick="uncompleteMark('trip_number_03')">UnMark Complete</button>
+      </div>
+      <br />
+      <div><a href="https://maps.app.goo.gl/hurKE8jm76pHdzkF7" target="_blank">Open Route: Avoid Toll, Ferries</a></div>
+      <br />
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d693310.7723554475!2d-85.25720536786498!3d47.25090829443167!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x4d3638301d7c2561%3A0x29641ad838e01b6c!2s442%20Bruce%20St%2C%20Sault%20Ste.%20Marie%2C%20ON%20P6B%201R4!3m2!1d46.520116699999996!2d-84.3200974!4m5!1s0x4d470a5f8bfa7cc5%3A0x1aa015f981d9ae89!2s95%20Mission%20Rd%2C%20Wawa%2C%20ON%20P0S%201K0!3m2!1d47.9833164!2d-84.7797621!5e0!3m2!1sen!2sca!4v1753986687168!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
-
-    <div id="trip_info">
+    <br />
+    <!---------------------------- 04 --------------------------------->
+    <div id="trip_info" class="trip_number_04">
       <div>
         <strong>Trip 04</strong>
       </div>
       <br />
       <div>
-        <strong>FROM:</strong><span class="fromtrip04"> 95 Mission Rd, Wawa, ON P0S 1K0 </span><span><button onclick="copyToClipboard('fromtrip04')">COPY</button></span>
+        <strong>FROM: </strong><span class="fromtrip04">95 Mission Rd, Wawa, ON P0S 1K0</span><span><button onclick="copyToClipboard('fromtrip04')">COPY</button><span>Wawa, ON</span></span>
       </div>
       <br />
       <div>
-        <strong>TO:</strong><span class="totrip04"> 217 ON-17, White River, ON P0M 3G0 </span><span><button onclick="copyToClipboard('totrip04')">COPY</button></span>
+        <strong>TO: </strong><span class="totrip04">217 ON-17, White River, ON P0M 3G0</span><span><button onclick="copyToClipboard('totrip04')">COPY</button><span>White River, ON</span></span>
       </div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d466691.6967457049!2d-85.31157110078557!3d48.30906801454671!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e6!4m5!1s0x4d470a5f8bfa7cc5%3A0x1aa015f981d9ae89!2s95%20Mission%20Rd%2C%20Wawa%2C%20ON%20P0S%201K0!3m2!1d47.9833164!2d-84.7797621!4m5!1s0x4d46cb6292f0215d%3A0xc5ffd9769efb70ee!2s217%20ON-17%2C%20White%20River%2C%20ON!3m2!1d48.5942593!2d-85.2798677!5e0!3m2!1sen!2sca!4v1753941926313!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <div>
+        <button onclick="completeMark('trip_number_04')">Mark Complete</button>
+        <button onclick="uncompleteMark('trip_number_04')">UnMark Complete</button>
+      </div>
+      <br />
+      <div><a href="https://maps.app.goo.gl/2WFgXBM7R33GGWVs8" target="_blank">Open Route: Avoid Toll, Ferries</a></div>
+      <br />
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1378728.4412660948!2d-86.1059997397068!3d47.55165702663987!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x4d3638301d7c2561%3A0x29641ad838e01b6c!2s442%20Bruce%20St%2C%20Sault%20Ste.%20Marie%2C%20ON%20P6B%201R4!3m2!1d46.520116699999996!2d-84.3200974!4m5!1s0x4d46cb6292f0215d%3A0xc5ffd9769efb70ee!2s217%20ON-17%2C%20White%20River%2C%20ON%20P0M%203G0!3m2!1d48.5942593!2d-85.2798677!5e0!3m2!1sen!2sca!4v1753986776091!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
-
-    <div id="trip_info">
+    <br />
+    <!---------------------------- 05 --------------------------------->
+    <div id="trip_info" class="trip_number_05">
       <div>
         <strong>Trip 05</strong>
       </div>
       <br />
       <div>
-        <strong>FROM:</strong><span class="fromtrip05"> 217 ON-17, White River, ON P0M 3G0 </span><span><button onclick="copyToClipboard('fromtrip05')">COPY</button></span>
+        <strong>FROM: </strong><span class="fromtrip05">217 ON-17, White River, ON P0M 3G0</span><span><button onclick="copyToClipboard('fromtrip05')">COPY</button><span>White River, ON</span></span>
       </div>
       <br />
       <div>
-        <strong>TO:</strong><span class="totrip05"> 3 Simcoe Plaza, Terrace Bay, ON P0T 2W0 </span><span><button onclick="copyToClipboard('totrip05')">COPY</button></span>
+        <strong>TO: </strong><span class="totrip05">3 Simcoe Plaza, Terrace Bay, ON P0T 2W0</span><span><button onclick="copyToClipboard('totrip05')">COPY</button><span>Terrace Bay, ON</span></span>
       </div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d673798.3816984164!2d-86.84809317694202!3d48.72411533093426!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e6!4m5!1s0x4d46cb6292f0215d%3A0xc5ffd9769efb70ee!2s217%20ON-17%2C%20White%20River%2C%20ON%20P0M%203G0!3m2!1d48.5942593!2d-85.2798677!4m5!1s0x4d4353e0c8081d47%3A0xeebaef15e861a2af!2s3%20Simcoe%20Plaza%2C%20Terrace%20Bay%2C%20ON!3m2!1d48.7820026!2d-87.10269579999999!5e0!3m2!1sen!2sca!4v1753942090318!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <div>
+        <button onclick="completeMark('trip_number_05')">Mark Complete</button>
+        <button onclick="uncompleteMark('trip_number_05')">UnMark Complete</button>
+      </div>
+      <br />
+      <div><a href="https://maps.app.goo.gl/KcGxk4Q7sEFak7RU8" target="_blank">Open Route: Avoid Toll, Ferries</a></div>
+      <br />
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d673789.9995939935!2d-86.85042022463007!3d48.72474097504279!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x4d46cb6292f0215d%3A0xc5ffd9769efb70ee!2s217%20ON-17%2C%20White%20River%2C%20ON%20P0M%203G0!3m2!1d48.5942593!2d-85.2798677!4m5!1s0x4d4353e0c8081d47%3A0xeebaef15e861a2af!2s3%20Simcoe%20Plaza%2C%20Terrace%20Bay%2C%20ON%20P0T%202W0!3m2!1d48.7820026!2d-87.10269579999999!5e0!3m2!1sen!2sca!4v1753986830662!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
-
-    <div id="trip_info">
+    <br />
+    <!---------------------------- 06 --------------------------------->
+    <div id="trip_info" class="trip_number_06">
       <div>
         <strong>Trip 06</strong>
       </div>
       <br />
       <div>
-        <strong>FROM:</strong><span class="fromtrip06"> 3 Simcoe Plaza, Terrace Bay, ON P0T 2W0 </span><span><button onclick="copyToClipboard('fromtrip06')">COPY</button></span>
+        <strong>FROM: </strong><span class="fromtrip06">3 Simcoe Plaza, Terrace Bay, ON P0T 2W0</span><span><button onclick="copyToClipboard('fromtrip06')">COPY</button><span>Terrace Bay, ON</span></span>
       </div>
       <br />
       <div>
-        <strong>TO:</strong><span class="totrip06"> 2240 Sleeping Giant Pkwy, Thunder Bay, ON P7A 0E7 </span><span><button onclick="copyToClipboard('totrip06')">COPY</button></span>
+        <strong>TO: </strong><span class="totrip06">2240 Sleeping Giant Pkwy, Thunder Bay, ON P7A 0E7</span><span><button onclick="copyToClipboard('totrip06')">COPY</button><span>Thunder Bay, ON</span></span>
       </div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d673836.6008788899!2d-88.84453183748349!3d48.7212625578079!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e6!4m5!1s0x4d4353e0c8081d47%3A0xeebaef15e861a2af!2s3%20Simcoe%20Plaza%2C%20Terrace%20Bay%2C%20ON%20P0T%202W0!3m2!1d48.7820026!2d-87.10269579999999!4m5!1s0x4d59223444f62f31%3A0x1001c23045926e11!2s2240%20Sleeping%20Giant%20Parkway%2C%20Thunder%20Bay%2C%20ON!3m2!1d48.4329665!2d-89.2181853!5e0!3m2!1sen!2sca!4v1753942239117!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <div>
+        <button onclick="completeMark('trip_number_06')">Mark Complete</button>
+        <button onclick="uncompleteMark('trip_number_06')">UnMark Complete</button>
+      </div>
+      <br />
+      <div><a href="https://maps.app.goo.gl/WKMsEoyz6KhDZRks6" target="_blank">Open Route: Avoid Toll, Ferries</a></div>
+      <br />
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d673766.4156603069!2d-88.82314971812525!3d48.72650125847101!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x4d4353e0c8081d47%3A0xeebaef15e861a2af!2s3%20Simcoe%20Plaza%2C%20Terrace%20Bay%2C%20ON%20P0T%202W0!3m2!1d48.7820026!2d-87.10269579999999!4m5!1s0x4d59223444f62f31%3A0x1001c23045926e11!2s2240%20Sleeping%20Giant%20Pkwy%2C%20Thunder%20Bay%2C%20ON%20P7A%200E7!3m2!1d48.4329665!2d-89.2181853!5e0!3m2!1sen!2sca!4v1753986884351!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
-
-    <div id="trip_info">
+    <br />
+    <!---------------------------- 07 --------------------------------->
+    <div id="trip_info" class="trip_number_07">
       <div>
         <strong>Trip 07</strong>
       </div>
       <br />
       <div>
-        <strong>FROM:</strong><span class="fromtrip07"> 2240 Sleeping Giant Pkwy, Thunder Bay, ON P7A 0E7 </span><span><button onclick="copyToClipboard('fromtrip07')">COPY</button></span>
+        <strong>FROM: </strong><span class="fromtrip07">2240 Sleeping Giant Pkwy, Thunder Bay, ON P7A 0E7</span><span><button onclick="copyToClipboard('fromtrip07')">COPY</button><span>Thunder Bay, ON</span></span>
       </div>
       <br />
       <div>
-        <strong>TO:</strong><span class="totrip07"> 311 Main St, Ignace, ON P0T 1T0 </span><span><button onclick="copyToClipboard('totrip07')">COPY</button></span>
+        <strong>TO: </strong><span class="totrip07">311 Main St, Ignace, ON P0T 1T0</span><span><button onclick="copyToClipboard('totrip07')">COPY</button><span>Ignace, ON</span></span>
       </div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d279296.4107722038!2d-91.54078211914774!3d49.43057907745007!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e6!4m5!1s0x4d59223444f62f31%3A0x1001c23045926e11!2s2240%20Sleeping%20Giant%20Pkwy%2C%20Thunder%20Bay%2C%20ON%20P7A%200E7!3m2!1d48.4329665!2d-89.2181853!4m5!1s0x52a233c0fd45ef1b%3A0x369e41d1633209c3!2s311%20Main%20St%2C%20Ignace%2C%20ON!3m2!1d49.4169354!2d-91.6595219!5e0!3m2!1sen!2sca!4v1753942658978!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <div>
+        <button onclick="completeMark('trip_number_07')">Mark Complete</button>
+        <button onclick="uncompleteMark('trip_number_07')">UnMark Complete</button>
+      </div>
+      <br />
+      <div><a href="https://maps.app.goo.gl/aWvUWnW3EqV8Q5qG6" target="_blank">Open Route: Avoid Toll, Ferries</a></div>
+      <br />
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d671125.5657585612!2d-91.09809658990852!3d48.92331294502073!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x4d59223444f62f31%3A0x1001c23045926e11!2s2240%20Sleeping%20Giant%20Pkwy%2C%20Thunder%20Bay%2C%20ON%20P7A%200E7!3m2!1d48.4329665!2d-89.2181853!4m5!1s0x52a233c0fd45ef1b%3A0x369e41d1633209c3!2s311%20Main%20St%2C%20Ignace%2C%20ON%20P0T%201T0!3m2!1d49.4169354!2d-91.6595219!5e0!3m2!1sen!2sca!4v1753986965196!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
-
-    <div id="trip_info">
+    <br />
+    <!---------------------------- 08 --------------------------------->
+    <div id="trip_info" class="trip_number_08">
       <div>
         <strong>Trip 08</strong>
       </div>
       <br />
       <div>
-        <strong>FROM:</strong><span class="fromtrip08"> 311 Main St, Ignace, ON P0T 1T0 </span><span><button onclick="copyToClipboard('fromtrip08')">COPY</button></span>
+        <strong>FROM: </strong><span class="fromtrip08">311 Main St, Ignace, ON P0T 1T0</span><span><button onclick="copyToClipboard('fromtrip08')">COPY</button><span>Ignace, ON</span></span>
       </div>
       <br />
       <div>
-        <strong>TO:</strong><span class="totrip08"> 405 2nd St S, Kenora, ON P9N 1G7 </span><span><button onclick="copyToClipboard('totrip08')">COPY</button></span>
+        <strong>TO: </strong><span class="totrip08">405 2nd St S, Kenora, ON P9N 1G7</span><span><button onclick="copyToClipboard('totrip08')">COPY</button><span>Kenora, ON</span></span>
       </div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d659739.1237831443!2d-93.73254190401495!3d49.76526391770298!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e6!4m5!1s0x52a233c0fd45ef1b%3A0x369e41d1633209c3!2s311%20Main%20St%2C%20Ignace%2C%20ON%20P0T%201T0!3m2!1d49.4169354!2d-91.6595219!4m5!1s0x52be0881048638f7%3A0xbc01e93c1baad08!2s405%202nd%20St%20S%2C%20Kenora%2C%20ON!3m2!1d49.7650194!2d-94.4868929!5e0!3m2!1sen!2sca!4v1753942841973!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <div>
+        <button onclick="completeMark('trip_number_08')">Mark Complete</button>
+        <button onclick="uncompleteMark('trip_number_08')">UnMark Complete</button>
+      </div>
+      <br />
+      <div><a href="https://maps.app.goo.gl/7gvmMyW7kMr395L3A" target="_blank">Open Route: Avoid Toll, Ferries</a></div>
+      <br />
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d661473.545142955!2d-93.73254238126916!3d49.63769671805001!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x52a233c0fd45ef1b%3A0x369e41d1633209c3!2s311%20Main%20St%2C%20Ignace%2C%20ON%20P0T%201T0!3m2!1d49.4169354!2d-91.6595219!4m5!1s0x52be0881048638f7%3A0xbc01e93c1baad08!2s405%202nd%20St%20S%2C%20Kenora%2C%20ON%20P9N%201G7!3m2!1d49.7650194!2d-94.4868929!5e0!3m2!1sen!2sca!4v1753987017295!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
-
-    <div id="trip_info">
+    <br />
+    <!---------------------------- 09 --------------------------------->
+    <div id="trip_info" class="trip_number_09">
       <div>
         <strong>Trip 09</strong>
       </div>
       <br />
       <div>
-        <strong>FROM:</strong><span class="fromtrip09"> 405 2nd St S, Kenora, ON P9N 1G7 </span><span><button onclick="copyToClipboard('fromtrip09')">COPY</button></span>
+        <strong>FROM: </strong><span class="fromtrip09">405 2nd St S, Kenora, ON P9N 1G7</span><span><button onclick="copyToClipboard('fromtrip09')">COPY</button><span>Kenora, ON</span></span>
       </div>
       <br />
       <div>
-        <strong>TO:</strong><span class="totrip09"> 323 Saskatchewan Ave W, Portage la Prairie, MB R1N 0L6 </span><span><button onclick="copyToClipboard('totrip09')">COPY</button></span>
+        <strong>TO: </strong><span class="totrip09">323 Saskatchewan Ave W, Portage la Prairie, MB R1N 0L6</span><span><button onclick="copyToClipboard('totrip09')">COPY</button><span>Portage la Prairie, MB</span></span>
       </div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d718356.5415634586!2d-97.56534830518135!3d49.83894514190269!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e6!4m5!1s0x52be0881048638f7%3A0xbc01e93c1baad08!2s405%202nd%20St%20S%2C%20Kenora%2C%20ON%20P9N%201G7!3m2!1d49.7650194!2d-94.4868929!4m5!1s0x52e9c60b20755be7%3A0xc1ba13d65aa58376!2s323%20Saskatchewan%20Ave%20W%2C%20Portage%20la%20Prairie%2C%20MB!3m2!1d49.972512599999995!2d-98.28475739999999!5e0!3m2!1sen!2sca!4v1753943860310!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <div>
+        <button onclick="completeMark('trip_number_09')">Mark Complete</button>
+        <button onclick="uncompleteMark('trip_number_09')">UnMark Complete</button>
+      </div>
+      <br />
+      <div><a href="https://maps.app.goo.gl/SuSqhLMm769PHsV17" target="_blank">Open Route: Avoid Toll, Ferries</a></div>
+      <br />
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1317112.382549248!2d-97.70527036099554!3d49.852131244273075!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x52be0881048638f7%3A0xbc01e93c1baad08!2s405%202nd%20St%20S%2C%20Kenora%2C%20ON%20P9N%201G7!3m2!1d49.7650194!2d-94.4868929!4m5!1s0x52e9c60b20755be7%3A0xc1ba13d65aa58376!2s323%20Saskatchewan%20Ave%20W%2C%20Portage%20la%20Prairie%2C%20MB%20R1N%200L6!3m2!1d49.972512599999995!2d-98.28475739999999!5e0!3m2!1sen!2sca!4v1753987079113!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
-
-    <div id="trip_info">
+    <br />
+    <!---------------------------- 10 --------------------------------->
+    <div id="trip_info" class="trip_number_10">
       <div>
         <strong>Trip 10</strong>
       </div>
       <br />
       <div>
-        <strong>FROM:</strong><span class="fromtrip10"> 323 Saskatchewan Ave W, Portage la Prairie, MB R1N 0L6 </span><span><button onclick="copyToClipboard('fromtrip10')">COPY</button></span>
+        <strong>FROM: </strong><span class="fromtrip10">323 Saskatchewan Ave W, Portage la Prairie, MB R1N 0L6</span><span><button onclick="copyToClipboard('fromtrip10')">COPY</button><span>Portage la Prairie, MB</span></span>
       </div>
       <br />
       <div>
-        <strong>TO:</strong><span class="totrip10"> 63 Seventh Ave N, Yorkton, SK S3N 0C9 </span><span><button onclick="copyToClipboard('totrip10')">COPY</button></span>
+        <strong>TO: </strong><span class="totrip10">63 Seventh Ave N, Yorkton, SK S3N 0C9</span><span><button onclick="copyToClipboard('totrip10')">COPY</button><span>Yorkton, SK</span></span>
       </div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1290868.6818542061!2d-101.48188473243917!3d50.80841621280159!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e6!4m5!1s0x52e9c60b20755be7%3A0xc1ba13d65aa58376!2s323%20Saskatchewan%20Ave%20W%2C%20Portage%20la%20Prairie%2C%20MB%20R1N%200L6!3m2!1d49.972512599999995!2d-98.28475739999999!4m5!1s0x52e3adc11e022613%3A0x218ad938e1a844d6!2s63%20Seventh%20Ave%20N%2C%20Yorkton%2C%20SK!3m2!1d51.2127135!2d-102.45341599999999!5e0!3m2!1sen!2sca!4v1753944373255!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <div>
+        <button onclick="completeMark('trip_number_10')">Mark Complete</button>
+        <button onclick="uncompleteMark('trip_number_10')">UnMark Complete</button>
+      </div>
+      <br />
+      <div><a href="https://maps.app.goo.gl/YZHd13tTAWrzeFY87" target="_blank">Open Route: Avoid Toll, Ferries</a></div>
+      <br />
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1299778.738317669!2d-101.68351082489202!3d50.4852250099635!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x52e9c60b20755be7%3A0xc1ba13d65aa58376!2s323%20Saskatchewan%20Ave%20W%2C%20Portage%20la%20Prairie%2C%20MB%20R1N%200L6!3m2!1d49.972512599999995!2d-98.28475739999999!4m5!1s0x52e3adc11e022613%3A0x218ad938e1a844d6!2s63%20Seventh%20Ave%20N%2C%20Yorkton%2C%20SK%20S3N%200C9!3m2!1d51.2127135!2d-102.45341599999999!5e0!3m2!1sen!2sca!4v1753987128385!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
-
-    <div id="trip_info">
+    <br />
+    <!---------------------------- 11 --------------------------------->
+    <div id="trip_info" class="trip_number_11">
       <div>
         <strong>Trip 11</strong>
       </div>
       <br />
       <div>
-        <strong>FROM:</strong><span class="fromtrip11"> 63 Seventh Ave N, Yorkton, SK S3N 0C9 </span><span><button onclick="copyToClipboard('fromtrip11')">COPY</button></span>
+        <strong>FROM: </strong><span class="fromtrip11">63 Seventh Ave N, Yorkton, SK S3N 0C9</span><span><button onclick="copyToClipboard('fromtrip11')">COPY</button><span>Yorkton, SK</span></span>
       </div>
       <br />
       <div>
-        <strong>TO:</strong><span class="totrip11"> 1802 Idylwyld Dr N, Saskatoon, SK S7L 1B5 </span><span><button onclick="copyToClipboard('totrip11')">COPY</button></span>
+        <strong>TO: </strong><span class="totrip11">1802 Idylwyld Dr N, Saskatoon, SK S7L 1B5</span><span><button onclick="copyToClipboard('totrip11')">COPY</button><span>Saskatoon, SK</span></span>
       </div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1498.212567740841!2d-106.66787616854921!3d52.153370207852205!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e6!4m5!1s0x52e3adc11e022613%3A0x218ad938e1a844d6!2s63%20Seventh%20Ave%20N%2C%20Yorkton%2C%20SK%20S3N%200C9!3m2!1d51.2127135!2d-102.45341599999999!4m5!1s0x5304f6fa83af9a35%3A0xcfe326a4fcdbd205!2s1802%20Idylwyld%20Dr%20N%2C%20Saskatoon%2C%20SK%20S7L%201B5!3m2!1d52.153687899999994!2d-106.6693885!5e0!3m2!1sen!2sca!4v1753944831772!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <div>
+        <button onclick="completeMark('trip_number_11')">Mark Complete</button>
+        <button onclick="uncompleteMark('trip_number_11')">UnMark Complete</button>
+      </div>
+      <br />
+      <div><a href="https://maps.app.goo.gl/5VgfDw7MVHLoAcf96" target="_blank">Open Route: Avoid Toll, Ferries</a></div>
+      <br />
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1266066.2142841737!2d-105.8806486499102!3d51.700368919204955!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x52e3adc11e022613%3A0x218ad938e1a844d6!2s63%20Seventh%20Ave%20N%2C%20Yorkton%2C%20SK%20S3N%200C9!3m2!1d51.2127135!2d-102.45341599999999!4m5!1s0x5304f6fa82a2c95f%3A0x65f5328a371ca303!2sat%20expressMart%2C%201802%20Idylwyld%20Dr%20N%2C%20Saskatoon%2C%20SK%20S7L%201B5!3m2!1d52.1536292!2d-106.66922799999999!5e0!3m2!1sen!2sca!4v1753987192851!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
-
-    <div id="trip_info">
+    <br />
+    <!---------------------------- 12 --------------------------------->
+    <div id="trip_info" class="trip_number_12">
       <div>
         <strong>Trip 12</strong>
       </div>
       <br />
       <div>
-        <strong>FROM:</strong><span class="fromtrip12"> 1802 Idylwyld Dr N, Saskatoon, SK S7L 1B5 </span><span><button onclick="copyToClipboard('fromtrip12')">COPY</button></span>
+        <strong>FROM: </strong><span class="fromtrip12">1802 Idylwyld Dr N, Saskatoon, SK S7L 1B5</span><span><button onclick="copyToClipboard('fromtrip12')">COPY</button><span>Saskatoon, SK</span></span>
       </div>
       <br />
       <div>
-        <strong>TO:</strong><span class="totrip12"> 792 105 St, North Battleford, SK S9A 1R8 </span><span><button onclick="copyToClipboard('totrip12')">COPY</button></span>
+        <strong>TO: </strong><span class="totrip12">792 105 St, North Battleford, SK S9A 1R8</span><span><button onclick="copyToClipboard('totrip12')">COPY</button><span>North Battleford, SK</span></span>
       </div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d311251.26661877026!2d-107.8015993490298!3d52.449245275981625!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e6!4m5!1s0x5304f6fa82a2c95f%3A0x65f5328a371ca303!2sat%20expressMart%2C%201802%20Idylwyld%20Dr%20N%2C%20Saskatoon%2C%20SK%20S7L%201B5!3m2!1d52.1536292!2d-106.66922799999999!4m5!1s0x530604373ab5748f%3A0xe51c71b3e0d6744b!2s792%20105%20Street%2C%20North%20Battleford%2C%20SK!3m2!1d52.7685162!2d-108.29149319999999!5e0!3m2!1sen!2sca!4v1753944948539!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <div>
+        <button onclick="completeMark('trip_number_12')">Mark Complete</button>
+        <button onclick="uncompleteMark('trip_number_12')">UnMark Complete</button>
+      </div>
+      <br />
+      <div><a href="https://maps.app.goo.gl/qucRE7aEftXkVRXB6" target="_blank">Open Route: Avoid Toll, Ferries</a></div>
+      <br />
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d311168.7235422164!2d-107.81012843883474!3d52.46092506473723!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x5304f6fa82a2c95f%3A0x65f5328a371ca303!2sat%20expressMart%2C%201802%20Idylwyld%20Dr%20N%2C%20Saskatoon%2C%20SK%20S7L%201B5!3m2!1d52.1536292!2d-106.66922799999999!4m5!1s0x530604373ab5748f%3A0xe51c71b3e0d6744b!2s792%20105%20St%2C%20North%20Battleford%2C%20SK%20S9A%201R8!3m2!1d52.7685162!2d-108.29149319999999!5e0!3m2!1sen!2sca!4v1753987252788!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
-
-    <div id="trip_info">
+    <br />
+    <!---------------------------- 13 --------------------------------->
+    <div id="trip_info" class="trip_number_13">
       <div>
         <strong>Trip 13</strong>
       </div>
       <br />
       <div>
-        <strong>FROM:</strong><span class="fromtrip13"> 792 105 St, North Battleford, SK S9A 1R8 </span><span><button onclick="copyToClipboard('fromtrip13')">COPY</button></span>
+        <strong>FROM: </strong><span class="fromtrip13">792 105 St, North Battleford, SK S9A 1R8</span><span><button onclick="copyToClipboard('fromtrip13')">COPY</button><span>North Battleford, SK</span></span>
       </div>
       <br />
       <div>
-        <strong>TO:</strong><span class="totrip13"> 8725 96 Ave NW, Edmonton, AB T6C 2B1 </span><span><button onclick="copyToClipboard('totrip13')">COPY</button></span>
+        <strong>TO: </strong><span class="totrip13">8725 96 Ave NW, Edmonton, AB T6C 2B1</span><span><button onclick="copyToClipboard('totrip13')">COPY</button><span>Edmonton, AB</span></span>
       </div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1225152.0551165799!2d-112.21134615894243!3d53.148335939147024!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e6!4m5!1s0x530604373ab5748f%3A0xe51c71b3e0d6744b!2s792%20105%20St%2C%20North%20Battleford%2C%20SK%20S9A%201R8!3m2!1d52.7685162!2d-108.29149319999999!4m5!1s0x53a022619e283bf1%3A0x43c4cb14c92e6c66!2s8725%2096%20Avenue%20Northwest%2C%20Edmonton%2C%20AB!3m2!1d53.5336539!2d-113.4620717!5e0!3m2!1sen!2sca!4v1753945056946!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <div>
+        <button onclick="completeMark('trip_number_13')">Mark Complete</button>
+        <button onclick="uncompleteMark('trip_number_13')">UnMark Complete</button>
+      </div>
+      <br />
+      <div><a href="https://maps.app.goo.gl/yzokdmERiQMWazGX7" target="_blank">Open Route: Avoid Toll, Ferries</a></div>
+      <br />
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1225152.0551165799!2d-112.19170325894247!3d53.148335939147024!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x530604373ab5748f%3A0xe51c71b3e0d6744b!2s792%20105%20St%2C%20North%20Battleford%2C%20SK%20S9A%201R8!3m2!1d52.7685162!2d-108.29149319999999!4m5!1s0x53a022619e283bf1%3A0x43c4cb14c92e6c66!2s8725%2096%20Ave%20NW%2C%20Edmonton%2C%20AB%20T6C%202B1!3m2!1d53.5336539!2d-113.4620717!5e0!3m2!1sen!2sca!4v1753987315631!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
+    <br />
   </body>
 </html>
