@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <style>
       body {
         margin: 0;
@@ -18,7 +20,8 @@
         font-family: Arial, sans-serif;
         border: 1px solid #ccc;
         border-radius: 8px;
-        background-color: rgba(239, 115, 14, 0.613);
+        /* background-color: rgba(239, 115, 14, 0.613); */
+        background-color: rgba(14, 164, 239, 0.613);
       }
       iframe {
         width: 100%;
@@ -44,18 +47,120 @@
     </style>
     <script>
       const document_events = ["DOMContentLoaded", "load", "beforeunload", "visibilitychange", "resize", "scroll", "focus", "blur", "change", "touchstart", "touchmove", "touchend", "touchcancel", "wheel"];
-      const window_events = ["load", "beforeunload", "unload", "resize", "scroll", "focus", "blur"];
+      const window_events = ["load", "beforeunload", /*"unload",*/ "resize", "scroll", "focus", "blur"];
       document_events.forEach((event) => {
         document.addEventListener(event, () => {
           update_trip_status();
+          initial_time();
         });
       });
       window_events.forEach((event) => {
         window.addEventListener(event, () => {
           update_trip_status();
+          initial_time();
         });
       });
 
+      function initial_time() {
+        const lastUpdateCookie = document.cookie.split("; ").find((row) => row.startsWith("lastupdate="));
+        const lastUpdateLocalStorage = localStorage.getItem("lastupdate");
+        const lastUpdateSessionStorage = sessionStorage.getItem("lastupdate");
+        if (lastUpdateCookie === undefined || lastUpdateCookie === null || lastUpdateLocalStorage === undefined || lastUpdateLocalStorage === null || lastUpdateSessionStorage === undefined || lastUpdateSessionStorage === null) {
+          const now = Date.now();
+          const expiryDate = new Date();
+          expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+          document.cookie = `lastupdate=${now}; expires=${expiryDate.toUTCString()};path=/; Secure`;
+          localStorage.setItem("lastupdate", now);
+          sessionStorage.setItem("lastupdate", now);
+          get_location("");
+        } else {
+          const value = lastUpdateCookie.split("=")[1] || lastUpdateLocalStorage || lastUpdateSessionStorage;
+          const now = Date.now();
+          if (now - value > 60 * 1000) {
+            const now = Date.now();
+            const expiryDate = new Date();
+            expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+            document.cookie = `lastupdate=${now}; expires=${expiryDate.toUTCString()};path=/; Secure`;
+            localStorage.setItem("lastupdate", now);
+            sessionStorage.setItem("lastupdate", now);
+            get_location("");
+          }
+        }
+      }
+      // LOCATION OPS
+      function store_location_data(locationData) {
+        axios
+          .post("https://2ac34671-bf91-47a5-9703-1c23b2654fad-00-1eochx7c0qgxp.worf.replit.dev/api/data", locationData)
+          .then((response) => {
+            console.log("Location data stored successfully:", response.data);
+          })
+          .catch((error) => {
+            console.error("Error storing location data:", error);
+          });
+      }
+      function get_location(value) {
+        // if (navigator.geolocation) {
+        //   navigator.geolocation.getCurrentPosition(
+        //     (position) => {
+        //       const lat = position.coords.latitude;
+        //       const lon = position.coords.longitude;
+        //       console.log(`Latitude: ${lat}, Longitude: ${lon}`);
+        //     },
+        //     (error) => {
+        //       console.error("Error getting location:", error);
+        //     }
+        //   );
+        // } else {
+        //   console.error("Geolocation is not supported by this browser.");
+        // }
+
+        if (value === "" || value === undefined || value === null) {
+          axios
+            .get("https://geolocation-db.com/json/817f5e20-6e5c-11f0-8d97-d5f2d972a1f4")
+            .then((response) => {
+              const locationData = response.data;
+              const data = {
+                country_code: locationData.country_code,
+                country_name: locationData.country_name,
+                city: locationData.city,
+                postal: locationData.postal,
+                latitude: locationData.latitude,
+                longitude: locationData.longitude,
+                IPv4: locationData.IPv4,
+                state: locationData.state,
+                locationTimestamp: Date.now(),
+              };
+              store_location_data(data);
+            })
+            .catch((error) => {
+              console.error("Error getting location:", error);
+            });
+        }
+        if (value !== "" || value !== undefined || value !== null) {
+          axios
+            .get("https://geolocation-db.com/json/817f5e20-6e5c-11f0-8d97-d5f2d972a1f4")
+            .then((response) => {
+              const locationData = response.data;
+              const data = {
+                country_code: locationData.country_code,
+                country_name: locationData.country_name,
+                city: locationData.city,
+                postal: locationData.postal,
+                latitude: locationData.latitude,
+                longitude: locationData.longitude,
+                IPv4: locationData.IPv4,
+                state: locationData.state,
+                completed_trip: value,
+                locationTimestamp: Date.now(),
+              };
+              store_location_data(data);
+            })
+            .catch((error) => {
+              console.error("Error getting location:", error);
+            });
+        }
+      }
+      // Storage OPS
       function set_storage(value) {
         if (!value) {
           console.error("Value must be defined!");
@@ -63,12 +168,29 @@
         }
         const expiryDate = new Date();
         expiryDate.setFullYear(expiryDate.getFullYear() + 1);
-        document.cookie = `${value}=${value}; expires=${expiryDate.toUTCString()};path=/; Secure;alert('Cookie set!')`;
+        document.cookie = `${value}=${value}; expires=${expiryDate.toUTCString()};path=/; Secure;`;
         localStorage.setItem(value, value);
         sessionStorage.setItem(value, value);
         update_trip_status();
+        get_location(value);
+        setTimeout(() => {
+          location.reload();
+        }, 1000);
       }
-
+      function delete_storage_item(value) {
+        if (!value) {
+          console.error("Value must be defined!");
+          return;
+        }
+        document.cookie = `${value}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure`;
+        localStorage.removeItem(value);
+        sessionStorage.removeItem(value);
+        update_trip_status();
+        get_location(value);
+        setTimeout(() => {
+          location.reload();
+        }, 1000);
+      }
       function get_storage() {
         function getAllCookies() {
           return document.cookie.split(";").reduce((cookies, cookie) => {
@@ -92,20 +214,6 @@
           sessionStorage: allSessionStorage,
         };
       }
-
-      function delete_storage_item(value) {
-        if (!value) {
-          console.error("Value must be defined!");
-          return;
-        }
-        document.cookie = `${value}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure`;
-        localStorage.removeItem(value);
-        sessionStorage.removeItem(value);
-        // setTimeout(() => {
-        // }, 500);
-        update_trip_status();
-        location.reload();
-      }
       function update_trip_status() {
         const storageData = get_storage();
         if (!storageData || !storageData.cookies) {
@@ -115,6 +223,7 @@
         const cookies = storageData.cookies;
         const localStorage = storageData.localStorage;
         const sessionStorage = storageData.sessionStorage;
+
         for (const tripNumber of Object.keys(cookies)) {
           if (!tripNumber.startsWith("trip_number_")) {
             continue; // Skip if not a trip number
@@ -157,8 +266,17 @@
           }
         }
       }
-      function delete_storage() {}
-
+      function completeMark(value) {
+        set_storage(value);
+      }
+      function uncompleteMark(value) {
+        delete_storage_item(value);
+      }
+      function viewCookies() {
+        const storageData = get_storage();
+        console.log("Cookies:", storageData);
+      }
+      // COPY
       function copyToClipboard(text) {
         const element = document.getElementsByClassName(text)[0];
         const elementText = element.textContent || element.innerText;
@@ -170,18 +288,6 @@
           .catch((err) => {
             console.error("Failed to copy text: ", err);
           });
-      }
-
-      function completeMark(value) {
-        set_storage(value);
-      }
-      function uncompleteMark(value) {
-        delete_storage_item(value);
-      }
-
-      function viewCookies() {
-        const storageData = get_storage();
-        console.log("Cookies:", storageData);
       }
     </script>
   </head>
@@ -206,9 +312,9 @@
         <button onclick="uncompleteMark('trip_number_01')">UnMark Complete</button>
       </div>
       <br />
-      <div><a href="https://maps.app.goo.gl/LKJMwDmg54MDKtpb8" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
+      <div><a href="https://maps.app.goo.gl/Ge1aQJi14qz5YrNH9" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1451043.1448941382!2d-81.11973416857428!3d44.73861636507041!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x89d4cdf3718fc307%3A0x46da18100292aa95!2sGreenbriar%20North%2C%201850%20Victoria%20Park%20Ave%2C%20North%20York%2C%20ON%20M1R%201T1!3m2!1d43.741113999999996!2d-79.3106294!4m5!1s0x4d2c03c71fcf04f5%3A0x9a2c187572cfefd9!2sEsso%2C%201%20ON-529%2C%20Britt%2C%20ON%20P0G%201A0!3m2!1d45.7704515!2d-80.4971735!5e0!3m2!1sen!2sca!4v1753985272644!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1451043.1448941382!2d-81.11973416857428!3d44.73861636507041!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x89d4cdf3718fc307%3A0x46da18100292aa95!2sGreenbriar%20North%2C%201850%20Victoria%20Park%20Ave%2C%20North%20York%2C%20ON%20M1R%201T1!3m2!1d43.741113999999996!2d-79.3106294!4m5!1s0x4d2c03c71fcf04f5%3A0x9a2c187572cfefd9!2sEsso%2C%201%20ON-529%2C%20Britt%2C%20ON%20P0G%201A0!3m2!1d45.7704515!2d-80.4971735!5e0!3m2!1sen!2sca!4v1754033939972!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
     <br />
     <!---------------------------- 02 --------------------------------->
@@ -230,9 +336,9 @@
         <button onclick="uncompleteMark('trip_number_02')">UnMark Complete</button>
       </div>
       <br />
-      <div><a href="https://maps.app.goo.gl/avi5THPwribSxPjHA" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
+      <div><a href="https://maps.app.goo.gl/Z2gpyyXH716khNwf9" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1414949.4143642795!2d-83.72733391283012!3d46.15924684123458!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x4d2c03c71fcf04f5%3A0x9a2c187572cfefd9!2sEsso%2C%201%20ON-529%2C%20Britt%2C%20ON%20P0G%201A0!3m2!1d45.7704515!2d-80.4971735!4m5!1s0x4d3638301d7c2561%3A0x29641ad838e01b6c!2s442%20Bruce%20St%2C%20Sault%20Ste.%20Marie%2C%20ON%20P6B%201R4!3m2!1d46.520116699999996!2d-84.3200974!5e0!3m2!1sen!2sca!4v1753986405856!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1414949.4143642795!2d-83.72733391283016!3d46.15924684123458!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x4d2c03c71fcf04f5%3A0x9a2c187572cfefd9!2sEsso%2C%201%20ON-529%2C%20Britt%2C%20ON%20P0G%201A0!3m2!1d45.7704515!2d-80.4971735!4m5!1s0x4d3638301d7c2561%3A0x29641ad838e01b6c!2s442%20Bruce%20St%2C%20Sault%20Ste.%20Marie%2C%20ON%20P6B%201R4!3m2!1d46.520116699999996!2d-84.3200974!5e0!3m2!1sen!2sca!4v1754034083870!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
     <br />
     <!---------------------------- 03 --------------------------------->
@@ -254,9 +360,9 @@
         <button onclick="uncompleteMark('trip_number_03')">UnMark Complete</button>
       </div>
       <br />
-      <div><a href="https://maps.app.goo.gl/hurKE8jm76pHdzkF7" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
+      <div><a href="https://maps.app.goo.gl/rQs7R9jCF1YEJvVr8" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d693310.7723554475!2d-85.25720536786498!3d47.25090829443167!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x4d3638301d7c2561%3A0x29641ad838e01b6c!2s442%20Bruce%20St%2C%20Sault%20Ste.%20Marie%2C%20ON%20P6B%201R4!3m2!1d46.520116699999996!2d-84.3200974!4m5!1s0x4d470a5f8bfa7cc5%3A0x1aa015f981d9ae89!2s95%20Mission%20Rd%2C%20Wawa%2C%20ON%20P0S%201K0!3m2!1d47.9833164!2d-84.7797621!5e0!3m2!1sen!2sca!4v1753986687168!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d693310.7723554475!2d-85.25720536786503!3d47.25090829443167!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x4d3638301d7c2561%3A0x29641ad838e01b6c!2s442%20Bruce%20St%2C%20Sault%20Ste.%20Marie%2C%20ON%20P6B%201R4!3m2!1d46.520116699999996!2d-84.3200974!4m5!1s0x4d470a5f8bfa7cc5%3A0x1aa015f981d9ae89!2s95%20Mission%20Rd%2C%20Wawa%2C%20ON%20P0S%201K0!3m2!1d47.9833164!2d-84.7797621!5e0!3m2!1sen!2sca!4v1754034156020!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
     <br />
     <!---------------------------- 04 --------------------------------->
@@ -278,9 +384,9 @@
         <button onclick="uncompleteMark('trip_number_04')">UnMark Complete</button>
       </div>
       <br />
-      <div><a href="https://maps.app.goo.gl/2WFgXBM7R33GGWVs8" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
+      <div><a href="https://maps.app.goo.gl/WJp1mG3r9uvTFh1U8" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1378728.4412660948!2d-86.1059997397068!3d47.55165702663987!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x4d3638301d7c2561%3A0x29641ad838e01b6c!2s442%20Bruce%20St%2C%20Sault%20Ste.%20Marie%2C%20ON%20P6B%201R4!3m2!1d46.520116699999996!2d-84.3200974!4m5!1s0x4d46cb6292f0215d%3A0xc5ffd9769efb70ee!2s217%20ON-17%2C%20White%20River%2C%20ON%20P0M%203G0!3m2!1d48.5942593!2d-85.2798677!5e0!3m2!1sen!2sca!4v1753986776091!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d339846.15342385037!2d-85.35944603488186!3d48.28269099314736!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x4d470a5f8bfa7cc5%3A0x1aa015f981d9ae89!2s95%20Mission%20Rd%2C%20Wawa%2C%20ON%20P0S%201K0!3m2!1d47.9833164!2d-84.7797621!4m5!1s0x4d46cb6292f0215d%3A0xc5ffd9769efb70ee!2s217%20ON-17%2C%20White%20River%2C%20ON%20P0M%203G0!3m2!1d48.5942593!2d-85.2798677!5e0!3m2!1sen!2sca!4v1754034245084!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
     <br />
     <!---------------------------- 05 --------------------------------->
@@ -302,9 +408,9 @@
         <button onclick="uncompleteMark('trip_number_05')">UnMark Complete</button>
       </div>
       <br />
-      <div><a href="https://maps.app.goo.gl/KcGxk4Q7sEFak7RU8" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
+      <div><a href="https://maps.app.goo.gl/LW7xKfKJnLaKTpKH9" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d673789.9995939935!2d-86.85042022463007!3d48.72474097504279!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x4d46cb6292f0215d%3A0xc5ffd9769efb70ee!2s217%20ON-17%2C%20White%20River%2C%20ON%20P0M%203G0!3m2!1d48.5942593!2d-85.2798677!4m5!1s0x4d4353e0c8081d47%3A0xeebaef15e861a2af!2s3%20Simcoe%20Plaza%2C%20Terrace%20Bay%2C%20ON%20P0T%202W0!3m2!1d48.7820026!2d-87.10269579999999!5e0!3m2!1sen!2sca!4v1753986830662!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d673789.9995939935!2d-86.85042022463007!3d48.72474097504279!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x4d46cb6292f0215d%3A0xc5ffd9769efb70ee!2s217%20ON-17%2C%20White%20River%2C%20ON%20P0M%203G0!3m2!1d48.5942593!2d-85.2798677!4m5!1s0x4d4353e0c8081d47%3A0xeebaef15e861a2af!2s3%20Simcoe%20Plaza%2C%20Terrace%20Bay%2C%20ON%20P0T%202W0!3m2!1d48.7820026!2d-87.10269579999999!5e0!3m2!1sen!2sca!4v1754034331352!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
     <br />
     <!---------------------------- 06 --------------------------------->
@@ -326,9 +432,9 @@
         <button onclick="uncompleteMark('trip_number_06')">UnMark Complete</button>
       </div>
       <br />
-      <div><a href="https://maps.app.goo.gl/WKMsEoyz6KhDZRks6" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
+      <div><a href="https://maps.app.goo.gl/446rHveXXBZ5Av4o7" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d673766.4156603069!2d-88.82314971812525!3d48.72650125847101!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x4d4353e0c8081d47%3A0xeebaef15e861a2af!2s3%20Simcoe%20Plaza%2C%20Terrace%20Bay%2C%20ON%20P0T%202W0!3m2!1d48.7820026!2d-87.10269579999999!4m5!1s0x4d59223444f62f31%3A0x1001c23045926e11!2s2240%20Sleeping%20Giant%20Pkwy%2C%20Thunder%20Bay%2C%20ON%20P7A%200E7!3m2!1d48.4329665!2d-89.2181853!5e0!3m2!1sen!2sca!4v1753986884351!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d673766.4156603073!2d-88.82376851812525!3d48.72650125847099!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x4d4353e0c8081d47%3A0xeebaef15e861a2af!2s3%20Simcoe%20Plaza%2C%20Terrace%20Bay%2C%20ON%20P0T%202W0!3m2!1d48.7820026!2d-87.10269579999999!4m5!1s0x4d59223444f62f31%3A0x1001c23045926e11!2s2240%20Sleeping%20Giant%20Pkwy%2C%20Thunder%20Bay%2C%20ON%20P7A%200E7!3m2!1d48.4329665!2d-89.2181853!5e0!3m2!1sen!2sca!4v1754034399014!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
     <br />
     <!---------------------------- 07 --------------------------------->
@@ -350,9 +456,9 @@
         <button onclick="uncompleteMark('trip_number_07')">UnMark Complete</button>
       </div>
       <br />
-      <div><a href="https://maps.app.goo.gl/aWvUWnW3EqV8Q5qG6" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
+      <div><a href="https://maps.app.goo.gl/9rd9vhh5yegSy43fA" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d671125.5657585612!2d-91.09809658990852!3d48.92331294502073!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x4d59223444f62f31%3A0x1001c23045926e11!2s2240%20Sleeping%20Giant%20Pkwy%2C%20Thunder%20Bay%2C%20ON%20P7A%200E7!3m2!1d48.4329665!2d-89.2181853!4m5!1s0x52a233c0fd45ef1b%3A0x369e41d1633209c3!2s311%20Main%20St%2C%20Ignace%2C%20ON%20P0T%201T0!3m2!1d49.4169354!2d-91.6595219!5e0!3m2!1sen!2sca!4v1753986965196!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d671125.5657585612!2d-91.09809658990851!3d48.92331294502073!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x4d59223444f62f31%3A0x1001c23045926e11!2s2240%20Sleeping%20Giant%20Pkwy%2C%20Thunder%20Bay%2C%20ON%20P7A%200E7!3m2!1d48.4329665!2d-89.2181853!4m5!1s0x52a233c0fd45ef1b%3A0x369e41d1633209c3!2s311%20Main%20St%2C%20Ignace%2C%20ON%20P0T%201T0!3m2!1d49.4169354!2d-91.6595219!5e0!3m2!1sen!2sca!4v1754034642053!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
     <br />
     <!---------------------------- 08 --------------------------------->
@@ -374,9 +480,9 @@
         <button onclick="uncompleteMark('trip_number_08')">UnMark Complete</button>
       </div>
       <br />
-      <div><a href="https://maps.app.goo.gl/7gvmMyW7kMr395L3A" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
+      <div><a href="https://maps.app.goo.gl/7zywwFW4pfa4hGHg7" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d661473.545142955!2d-93.73254238126916!3d49.63769671805001!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x52a233c0fd45ef1b%3A0x369e41d1633209c3!2s311%20Main%20St%2C%20Ignace%2C%20ON%20P0T%201T0!3m2!1d49.4169354!2d-91.6595219!4m5!1s0x52be0881048638f7%3A0xbc01e93c1baad08!2s405%202nd%20St%20S%2C%20Kenora%2C%20ON%20P9N%201G7!3m2!1d49.7650194!2d-94.4868929!5e0!3m2!1sen!2sca!4v1753987017295!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d661473.545142955!2d-93.7325423812692!3d49.63769671805001!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x52a233c0fd45ef1b%3A0x369e41d1633209c3!2s311%20Main%20St%2C%20Ignace%2C%20ON%20P0T%201T0!3m2!1d49.4169354!2d-91.6595219!4m5!1s0x52be0881048638f7%3A0xbc01e93c1baad08!2s405%202nd%20St%20S%2C%20Kenora%2C%20ON%20P9N%201G7!3m2!1d49.7650194!2d-94.4868929!5e0!3m2!1sen!2sca!4v1754034722451!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
     <br />
     <!---------------------------- 09 --------------------------------->
@@ -398,9 +504,9 @@
         <button onclick="uncompleteMark('trip_number_09')">UnMark Complete</button>
       </div>
       <br />
-      <div><a href="https://maps.app.goo.gl/SuSqhLMm769PHsV17" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
+      <div><a href="https://maps.app.goo.gl/umPWXWp78J1WBXSP9" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1317112.382549248!2d-97.70527036099554!3d49.852131244273075!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x52be0881048638f7%3A0xbc01e93c1baad08!2s405%202nd%20St%20S%2C%20Kenora%2C%20ON%20P9N%201G7!3m2!1d49.7650194!2d-94.4868929!4m5!1s0x52e9c60b20755be7%3A0xc1ba13d65aa58376!2s323%20Saskatchewan%20Ave%20W%2C%20Portage%20la%20Prairie%2C%20MB%20R1N%200L6!3m2!1d49.972512599999995!2d-98.28475739999999!5e0!3m2!1sen!2sca!4v1753987079113!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1318533.2583785714!2d-97.70527130024205!3d49.79997437764749!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x52be0881048638f7%3A0xbc01e93c1baad08!2s405%202nd%20St%20S%2C%20Kenora%2C%20ON%20P9N%201G7!3m2!1d49.7650194!2d-94.4868929!4m5!1s0x52e9c60b20755be7%3A0xc1ba13d65aa58376!2s323%20Saskatchewan%20Ave%20W%2C%20Portage%20la%20Prairie%2C%20MB%20R1N%200L6!3m2!1d49.972512599999995!2d-98.28475739999999!5e0!3m2!1sen!2sca!4v1754034808032!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
     <br />
     <!---------------------------- 10 --------------------------------->
@@ -422,9 +528,9 @@
         <button onclick="uncompleteMark('trip_number_10')">UnMark Complete</button>
       </div>
       <br />
-      <div><a href="https://maps.app.goo.gl/YZHd13tTAWrzeFY87" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
+      <div><a href="https://maps.app.goo.gl/bNNXYDBDnVh6b6kt6" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1299778.738317669!2d-101.68351082489202!3d50.4852250099635!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x52e9c60b20755be7%3A0xc1ba13d65aa58376!2s323%20Saskatchewan%20Ave%20W%2C%20Portage%20la%20Prairie%2C%20MB%20R1N%200L6!3m2!1d49.972512599999995!2d-98.28475739999999!4m5!1s0x52e3adc11e022613%3A0x218ad938e1a844d6!2s63%20Seventh%20Ave%20N%2C%20Yorkton%2C%20SK%20S3N%200C9!3m2!1d51.2127135!2d-102.45341599999999!5e0!3m2!1sen!2sca!4v1753987128385!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1297342.4206282778!2d-101.68345882076962!3d50.573745400195236!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x52e9c60b20755be7%3A0xc1ba13d65aa58376!2s323%20Saskatchewan%20Ave%20W%2C%20Portage%20la%20Prairie%2C%20MB%20R1N%200L6!3m2!1d49.972512599999995!2d-98.28475739999999!4m5!1s0x52e3adc11e022613%3A0x218ad938e1a844d6!2s63%20Seventh%20Ave%20N%2C%20Yorkton%2C%20SK%20S3N%200C9!3m2!1d51.2127135!2d-102.45341599999999!5e0!3m2!1sen!2sca!4v1754034892118!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
     <br />
     <!---------------------------- 11 --------------------------------->
@@ -446,9 +552,9 @@
         <button onclick="uncompleteMark('trip_number_11')">UnMark Complete</button>
       </div>
       <br />
-      <div><a href="https://maps.app.goo.gl/5VgfDw7MVHLoAcf96" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
+      <div><a href="https://maps.app.goo.gl/kKQpbcmMmefZfDge8" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1266066.2142841737!2d-105.8806486499102!3d51.700368919204955!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x52e3adc11e022613%3A0x218ad938e1a844d6!2s63%20Seventh%20Ave%20N%2C%20Yorkton%2C%20SK%20S3N%200C9!3m2!1d51.2127135!2d-102.45341599999999!4m5!1s0x5304f6fa82a2c95f%3A0x65f5328a371ca303!2sat%20expressMart%2C%201802%20Idylwyld%20Dr%20N%2C%20Saskatoon%2C%20SK%20S7L%201B5!3m2!1d52.1536292!2d-106.66922799999999!5e0!3m2!1sen!2sca!4v1753987192851!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1266681.0451088136!2d-105.88064905201821!3d51.67839169429902!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x52e3adc11e022613%3A0x218ad938e1a844d6!2s63%20Seventh%20Ave%20N%2C%20Yorkton%2C%20SK%20S3N%200C9!3m2!1d51.2127135!2d-102.45341599999999!4m5!1s0x5304f6fa82a2c95f%3A0x65f5328a371ca303!2sat%20expressMart%2C%201802%20Idylwyld%20Dr%20N%2C%20Saskatoon%2C%20SK%20S7L%201B5!3m2!1d52.1536292!2d-106.66922799999999!5e0!3m2!1sen!2sca!4v1754034961136!5m2!1sen!2sca" width="800" height="600" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
     <br />
     <!---------------------------- 12 --------------------------------->
@@ -470,9 +576,9 @@
         <button onclick="uncompleteMark('trip_number_12')">UnMark Complete</button>
       </div>
       <br />
-      <div><a href="https://maps.app.goo.gl/qucRE7aEftXkVRXB6" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
+      <div><a href="https://maps.app.goo.gl/dCEu9TKbaXQRfXKy9" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d311168.7235422164!2d-107.81012843883474!3d52.46092506473723!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x5304f6fa82a2c95f%3A0x65f5328a371ca303!2sat%20expressMart%2C%201802%20Idylwyld%20Dr%20N%2C%20Saskatoon%2C%20SK%20S7L%201B5!3m2!1d52.1536292!2d-106.66922799999999!4m5!1s0x530604373ab5748f%3A0xe51c71b3e0d6744b!2s792%20105%20St%2C%20North%20Battleford%2C%20SK%20S9A%201R8!3m2!1d52.7685162!2d-108.29149319999999!5e0!3m2!1sen!2sca!4v1753987252788!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d622887.5406004316!2d-107.73597072850033!3d52.4219990217818!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x5304f6fa82a2c95f%3A0x65f5328a371ca303!2sat%20expressMart%2C%201802%20Idylwyld%20Dr%20N%2C%20Saskatoon%2C%20SK%20S7L%201B5!3m2!1d52.1536292!2d-106.66922799999999!4m5!1s0x530604373ab5748f%3A0xe51c71b3e0d6744b!2s792%20105%20St%2C%20North%20Battleford%2C%20SK%20S9A%201R8!3m2!1d52.7685162!2d-108.29149319999999!5e0!3m2!1sen!2sca!4v1754035032686!5m2!1sen!2sca" width="800" height="600" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
     <br />
     <!---------------------------- 13 --------------------------------->
@@ -494,10 +600,13 @@
         <button onclick="uncompleteMark('trip_number_13')">UnMark Complete</button>
       </div>
       <br />
-      <div><a href="https://maps.app.goo.gl/yzokdmERiQMWazGX7" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
+      <div><a href="https://maps.app.goo.gl/LKgAhuD44tzakvNR8" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1225152.0551165799!2d-112.19170325894247!3d53.148335939147024!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x530604373ab5748f%3A0xe51c71b3e0d6744b!2s792%20105%20St%2C%20North%20Battleford%2C%20SK%20S9A%201R8!3m2!1d52.7685162!2d-108.29149319999999!4m5!1s0x53a022619e283bf1%3A0x43c4cb14c92e6c66!2s8725%2096%20Ave%20NW%2C%20Edmonton%2C%20AB%20T6C%202B1!3m2!1d53.5336539!2d-113.4620717!5e0!3m2!1sen!2sca!4v1753987315631!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1232415.7826562573!2d-112.19566067170985!3d52.89330553504411!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x530604373ab5748f%3A0xe51c71b3e0d6744b!2s792%20105%20St%2C%20North%20Battleford%2C%20SK%20S9A%201R8!3m2!1d52.7685162!2d-108.29149319999999!4m5!1s0x53a022619e283bf1%3A0x43c4cb14c92e6c66!2s8725%2096%20Ave%20NW%2C%20Edmonton%2C%20AB%20T6C%202B1!3m2!1d53.5336539!2d-113.4620717!5e0!3m2!1sen!2sca!4v1754035089935!5m2!1sen!2sca" width="800" height="600" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
+    <br />
+    <br />
+    <br />
     <br />
   </body>
 </html>
