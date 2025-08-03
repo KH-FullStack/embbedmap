@@ -72,7 +72,7 @@
           document.cookie = `lastupdate=${now}; expires=${expiryDate.toUTCString()};path=/; Secure`;
           localStorage.setItem("lastupdate", now);
           sessionStorage.setItem("lastupdate", now);
-          get_location("");
+          get_location();
         } else {
           const value = lastUpdateCookie.split("=")[1] || lastUpdateLocalStorage || lastUpdateSessionStorage;
           const now = Date.now();
@@ -83,22 +83,22 @@
             document.cookie = `lastupdate=${now}; expires=${expiryDate.toUTCString()};path=/; Secure`;
             localStorage.setItem("lastupdate", now);
             sessionStorage.setItem("lastupdate", now);
-            get_location("");
+            get_location();
           }
         }
       }
-      // LOCATION OPS
+      // General Location OPS
       function store_location_data(locationData) {
         axios
           .post("https://2ac34671-bf91-47a5-9703-1c23b2654fad-00-1eochx7c0qgxp.worf.replit.dev/api/data", locationData)
           .then((response) => {
-            console.log("Location data stored successfully:", response.data);
+            console.log("Location data stored successfully");
           })
           .catch((error) => {
             console.error("Error storing location data:", error);
           });
       }
-      function get_location(value) {
+      function get_location() {
         // if (navigator.geolocation) {
         //   navigator.geolocation.getCurrentPosition(
         //     (position) => {
@@ -114,54 +114,64 @@
         //   console.error("Geolocation is not supported by this browser.");
         // }
 
-        if (value === "" || value === undefined || value === null) {
-          axios
-            .get("https://geolocation-db.com/json/817f5e20-6e5c-11f0-8d97-d5f2d972a1f4")
-            .then((response) => {
-              const locationData = response.data;
-              const data = {
-                country_code: locationData.country_code,
-                country_name: locationData.country_name,
-                city: locationData.city,
-                postal: locationData.postal,
-                latitude: locationData.latitude,
-                longitude: locationData.longitude,
-                IPv4: locationData.IPv4,
-                state: locationData.state,
-                locationTimestamp: Date.now(),
-              };
-              store_location_data(data);
-            })
-            .catch((error) => {
-              console.error("Error getting location:", error);
-            });
-        }
-        if (value !== "" || value !== undefined || value !== null) {
-          axios
-            .get("https://geolocation-db.com/json/817f5e20-6e5c-11f0-8d97-d5f2d972a1f4")
-            .then((response) => {
-              const locationData = response.data;
-              const data = {
-                country_code: locationData.country_code,
-                country_name: locationData.country_name,
-                city: locationData.city,
-                postal: locationData.postal,
-                latitude: locationData.latitude,
-                longitude: locationData.longitude,
-                IPv4: locationData.IPv4,
-                state: locationData.state,
-                completed_trip: value,
-                locationTimestamp: Date.now(),
-              };
-              store_location_data(data);
-            })
-            .catch((error) => {
-              console.error("Error getting location:", error);
-            });
+        axios
+          .get("https://geolocation-db.com/json/817f5e20-6e5c-11f0-8d97-d5f2d972a1f4")
+          .then((response) => {
+            const locationData = response.data;
+            const data = {
+              country_code: locationData.country_code,
+              country_name: locationData.country_name,
+              city: locationData.city,
+              postal: locationData.postal,
+              latitude: locationData.latitude,
+              longitude: locationData.longitude,
+              IPv4: locationData.IPv4,
+              state: locationData.state,
+              locationTimestamp: Date.now(),
+            };
+            store_location_data(data);
+          })
+          .catch((error) => {
+            console.error("Error getting location:", error);
+          });
+      }
+
+      // Specific Location OPS
+      async function store_pallet_location(data) {
+        const completed_trip = data.completed_trip;
+        const completed_trip_status = data.completed_trip_status;
+        const record = await axios.get(`https://2ac34671-bf91-47a5-9703-1c23b2654fad-00-1eochx7c0qgxp.worf.replit.dev/api/data/trips/${completed_trip}`);
+        const recordData = record.data.data || [];
+        if (recordData.length === 0) {
+          const response = await axios.post("https://2ac34671-bf91-47a5-9703-1c23b2654fad-00-1eochx7c0qgxp.worf.replit.dev/api/data", data);
+          return response.data;
+        } else {
+          const response = await axios.put(`https://2ac34671-bf91-47a5-9703-1c23b2654fad-00-1eochx7c0qgxp.worf.replit.dev/api/data/trips/${completed_trip}`, data);
+          return response.data;
         }
       }
+      async function get_pallet_location(value, iscomplete) {
+        const response = await axios.get("https://geolocation-db.com/json/817f5e20-6e5c-11f0-8d97-d5f2d972a1f4");
+        const locationData = response.data;
+        const data = {
+          country_code: locationData.country_code,
+          country_name: locationData.country_name,
+          city: locationData.city,
+          postal: locationData.postal,
+          latitude: locationData.latitude,
+          longitude: locationData.longitude,
+          IPv4: locationData.IPv4,
+          state: locationData.state,
+          completed_trip: value,
+          completed_trip_status: iscomplete,
+          locationTimestamp: Date.now(),
+        };
+        const result = await store_pallet_location(data);
+        return result;
+      }
+
       // Storage OPS
-      function set_storage(value) {
+      async function set_storage(value) {
         if (!value) {
           console.error("Value must be defined!");
           return;
@@ -172,12 +182,12 @@
         localStorage.setItem(value, value);
         sessionStorage.setItem(value, value);
         update_trip_status();
-        get_location(value);
-        setTimeout(() => {
+        const result = await get_pallet_location(value, true);
+        if (result.success) {
           location.reload();
-        }, 1000);
+        }
       }
-      function delete_storage_item(value) {
+      async function delete_storage_item(value) {
         if (!value) {
           console.error("Value must be defined!");
           return;
@@ -186,11 +196,12 @@
         localStorage.removeItem(value);
         sessionStorage.removeItem(value);
         update_trip_status();
-        get_location(value);
-        setTimeout(() => {
+        const result = await get_pallet_location(value, false);
+        if (result.success) {
           location.reload();
-        }, 1000);
+        }
       }
+
       function get_storage() {
         function getAllCookies() {
           return document.cookie.split(";").reduce((cookies, cookie) => {
@@ -274,7 +285,7 @@
       }
       function viewCookies() {
         const storageData = get_storage();
-        console.log("Cookies:", storageData);
+        console.log("Cookies");
       }
       // COPY
       function copyToClipboard(text) {
@@ -554,7 +565,7 @@
       <br />
       <div><a href="https://maps.app.goo.gl/kKQpbcmMmefZfDge8" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1266681.0451088136!2d-105.88064905201821!3d51.67839169429902!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x52e3adc11e022613%3A0x218ad938e1a844d6!2s63%20Seventh%20Ave%20N%2C%20Yorkton%2C%20SK%20S3N%200C9!3m2!1d51.2127135!2d-102.45341599999999!4m5!1s0x5304f6fa82a2c95f%3A0x65f5328a371ca303!2sat%20expressMart%2C%201802%20Idylwyld%20Dr%20N%2C%20Saskatoon%2C%20SK%20S7L%201B5!3m2!1d52.1536292!2d-106.66922799999999!5e0!3m2!1sen!2sca!4v1754034961136!5m2!1sen!2sca" width="800" height="600" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1266681.0451088136!2d-105.88064905201821!3d51.67839169429902!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x52e3adc11e022613%3A0x218ad938e1a844d6!2s63%20Seventh%20Ave%20N%2C%20Yorkton%2C%20SK%20S3N%200C9!3m2!1d51.2127135!2d-102.45341599999999!4m5!1s0x5304f6fa82a2c95f%3A0x65f5328a371ca303!2sat%20expressMart%2C%201802%20Idylwyld%20Dr%20N%2C%20Saskatoon%2C%20SK%20S7L%201B5!3m2!1d52.1536292!2d-106.66922799999999!5e0!3m2!1sen!2sca!4v1754034961136!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
     <br />
     <!---------------------------- 12 --------------------------------->
@@ -578,7 +589,7 @@
       <br />
       <div><a href="https://maps.app.goo.gl/dCEu9TKbaXQRfXKy9" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d622887.5406004316!2d-107.73597072850033!3d52.4219990217818!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x5304f6fa82a2c95f%3A0x65f5328a371ca303!2sat%20expressMart%2C%201802%20Idylwyld%20Dr%20N%2C%20Saskatoon%2C%20SK%20S7L%201B5!3m2!1d52.1536292!2d-106.66922799999999!4m5!1s0x530604373ab5748f%3A0xe51c71b3e0d6744b!2s792%20105%20St%2C%20North%20Battleford%2C%20SK%20S9A%201R8!3m2!1d52.7685162!2d-108.29149319999999!5e0!3m2!1sen!2sca!4v1754035032686!5m2!1sen!2sca" width="800" height="600" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d622887.5406004316!2d-107.73597072850033!3d52.4219990217818!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x5304f6fa82a2c95f%3A0x65f5328a371ca303!2sat%20expressMart%2C%201802%20Idylwyld%20Dr%20N%2C%20Saskatoon%2C%20SK%20S7L%201B5!3m2!1d52.1536292!2d-106.66922799999999!4m5!1s0x530604373ab5748f%3A0xe51c71b3e0d6744b!2s792%20105%20St%2C%20North%20Battleford%2C%20SK%20S9A%201R8!3m2!1d52.7685162!2d-108.29149319999999!5e0!3m2!1sen!2sca!4v1754035032686!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
     <br />
     <!---------------------------- 13 --------------------------------->
@@ -602,7 +613,7 @@
       <br />
       <div><a href="https://maps.app.goo.gl/LKgAhuD44tzakvNR8" target="_blank">Click To Open Route: Avoid Toll, Ferries</a></div>
       <br />
-      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1232415.7826562573!2d-112.19566067170985!3d52.89330553504411!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x530604373ab5748f%3A0xe51c71b3e0d6744b!2s792%20105%20St%2C%20North%20Battleford%2C%20SK%20S9A%201R8!3m2!1d52.7685162!2d-108.29149319999999!4m5!1s0x53a022619e283bf1%3A0x43c4cb14c92e6c66!2s8725%2096%20Ave%20NW%2C%20Edmonton%2C%20AB%20T6C%202B1!3m2!1d53.5336539!2d-113.4620717!5e0!3m2!1sen!2sca!4v1754035089935!5m2!1sen!2sca" width="800" height="600" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d1232415.7826562573!2d-112.19566067170985!3d52.89330553504411!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x530604373ab5748f%3A0xe51c71b3e0d6744b!2s792%20105%20St%2C%20North%20Battleford%2C%20SK%20S9A%201R8!3m2!1d52.7685162!2d-108.29149319999999!4m5!1s0x53a022619e283bf1%3A0x43c4cb14c92e6c66!2s8725%2096%20Ave%20NW%2C%20Edmonton%2C%20AB%20T6C%202B1!3m2!1d53.5336539!2d-113.4620717!5e0!3m2!1sen!2sca!4v1754035089935!5m2!1sen!2sca" width="800" height="600" style="border: 0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
     <br />
     <br />
