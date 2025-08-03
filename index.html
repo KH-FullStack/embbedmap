@@ -90,7 +90,7 @@
       // General Location OPS
       function store_location_data(locationData) {
         axios
-          .post("https://2ac34671-bf91-47a5-9703-1c23b2654fad-00-1eochx7c0qgxp.worf.replit.dev/api/data", locationData)
+          .post("https://2ac34671-bf91-47a5-9703-1c23b2654fad-00-1eochx7c0qgxp.worf.replit.dev/api/data/add", locationData)
           .then((response) => {
             console.log("Location data stored successfully");
           })
@@ -143,7 +143,7 @@
         const record = await axios.get(`https://2ac34671-bf91-47a5-9703-1c23b2654fad-00-1eochx7c0qgxp.worf.replit.dev/api/data/trips/${completed_trip}`);
         const recordData = record.data.data || [];
         if (recordData.length === 0) {
-          const response = await axios.post("https://2ac34671-bf91-47a5-9703-1c23b2654fad-00-1eochx7c0qgxp.worf.replit.dev/api/data", data);
+          const response = await axios.post("https://2ac34671-bf91-47a5-9703-1c23b2654fad-00-1eochx7c0qgxp.worf.replit.dev/api/data/add", data);
           return response.data;
         } else {
           const response = await axios.put(`https://2ac34671-bf91-47a5-9703-1c23b2654fad-00-1eochx7c0qgxp.worf.replit.dev/api/data/trips/${completed_trip}`, data);
