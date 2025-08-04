@@ -98,42 +98,77 @@
             console.error("Error storing location data:", error);
           });
       }
-      function get_location() {
-        // if (navigator.geolocation) {
-        //   navigator.geolocation.getCurrentPosition(
-        //     (position) => {
-        //       const lat = position.coords.latitude;
-        //       const lon = position.coords.longitude;
-        //       console.log(`Latitude: ${lat}, Longitude: ${lon}`);
-        //     },
-        //     (error) => {
-        //       console.error("Error getting location:", error);
-        //     }
-        //   );
-        // } else {
-        //   console.error("Geolocation is not supported by this browser.");
-        // }
 
-        axios
-          .get("https://geolocation-db.com/json/817f5e20-6e5c-11f0-8d97-d5f2d972a1f4")
-          .then((response) => {
-            const locationData = response.data;
-            const data = {
-              country_code: locationData.country_code,
-              country_name: locationData.country_name,
-              city: locationData.city,
-              postal: locationData.postal,
-              latitude: locationData.latitude,
-              longitude: locationData.longitude,
-              IPv4: locationData.IPv4,
-              state: locationData.state,
-              locationTimestamp: Date.now(),
-            };
-            store_location_data(data);
-          })
-          .catch((error) => {
-            console.error("Error getting location:", error);
-          });
+      
+      function get_location() {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const lat = position.coords.latitude;
+              const lon = position.coords.longitude;
+              const data = {
+                country_code: "No Country",
+                country_name: "No Country",
+                city: "No City",
+                postal: "No Postal",
+                latitude: lat,
+                longitude: lon,
+                IPv4: "No IPv4",
+                state: "No State",
+                locationTimestamp: Date.now(),
+              };
+              store_location_data(data);
+            },
+            (error) => {
+              axios
+                .get("https://geolocation-db.com/json/817f5e20-6e5c-11f0-8d97-d5f2d972a1f4")
+                .then((response) => {
+                  const locationData = response.data;
+                  const data = {
+                    country_code: locationData.country_code,
+                    country_name: locationData.country_name,
+                    city: locationData.city,
+                    postal: locationData.postal,
+                    latitude: locationData.latitude,
+                    longitude: locationData.longitude,
+                    IPv4: locationData.IPv4,
+                    state: locationData.state,
+                    locationTimestamp: Date.now(),
+                  };
+                  store_location_data(data);
+                })
+                .catch((error) => {
+                  console.error("Error getting location:", error);
+                });
+            },
+            {
+              enableHighAccuracy: true,
+              maximumAge: 0,
+              timeout: 10000,
+            }
+          );
+        } else {
+          axios
+            .get("https://geolocation-db.com/json/817f5e20-6e5c-11f0-8d97-d5f2d972a1f4")
+            .then((response) => {
+              const locationData = response.data;
+              const data = {
+                country_code: locationData.country_code,
+                country_name: locationData.country_name,
+                city: locationData.city,
+                postal: locationData.postal,
+                latitude: locationData.latitude,
+                longitude: locationData.longitude,
+                IPv4: locationData.IPv4,
+                state: locationData.state,
+                locationTimestamp: Date.now(),
+              };
+              store_location_data(data);
+            })
+            .catch((error) => {
+              console.error("Error getting location:", error);
+            });
+        }
       }
 
       // Specific Location OPS
@@ -621,3 +656,4 @@
     <br />
   </body>
 </html>
+
